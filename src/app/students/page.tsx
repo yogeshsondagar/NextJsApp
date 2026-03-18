@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store/store';
 import { setInitialStudents, addStudent, deleteStudent, updateStudent } from '@/store/studentSlice';
+import { useSession } from 'next-auth/react';
 
 
 export default function StudentsPage() {
@@ -14,10 +15,18 @@ export default function StudentsPage() {
 
   const students = useSelector((state: RootState) => state.students.list);
 
+  const { data: session } = useSession();
+
+  // Define our role flags for clean, readable code
+  const isAdmin = session?.user?.role === 'admin';
+  const isDepartment = session?.user?.role === 'department';
+  const isIntern = session?.user?.role === 'intern';
+  const canEdit = isAdmin || isDepartment; // Department and Admin can edit
+  const canDelete = isAdmin; // Only Admin can delete
+
   const [searchQuery, setSearchQuery] = useState('');
   const [newStudentName, setNewStudentName] = useState('');
   const [newDepartmentName, setnewDepartmentName] = useState('');
-
 
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -63,6 +72,7 @@ export default function StudentsPage() {
     <div className='p-6'>
 
       <h1 className="text-2xl font-bold mb-9">Students Management</h1>
+      <p className="mb-4 text-sm text-gray-500">Your role: {session?.user?.role}</p>
 
       <h2 className="text-2xl font-bold mb-4">Search Students</h2>
       {/* Search Input */}
@@ -76,39 +86,41 @@ export default function StudentsPage() {
 
       <h2 className="text-2xl font-bold mb-4">Add new Students</h2>
       {/* Add Student Form */}
-      <form onSubmit={handleSubmit} className="mb-8">
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Student name"
-            value={newStudentName}
-            onChange={(e) => setNewStudentName(e.target.value)}
-            className="border p-2 mr-2"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Department name"
-            value={newDepartmentName}
-            onChange={(e) => setnewDepartmentName(e.target.value)}
-            className="border p-2 mr-2"
-            required
-          />
-        </div>
-        <button type="submit" className="bg-blue-500 text-white p-2 rounded">
-          {editingId ? 'Update Student' : 'Add Student'}
-        </button>
-        {/* Cancel Edit Button */}
-        {editingId && (
-          <button
-            type="button"
-            onClick={() => { setEditingId(null); setNewStudentName(''); }}
-            className="ml-2 text-gray-500"
-          >
-            Cancel
+      {!isIntern && (
+        <form onSubmit={handleSubmit} className="mb-8">
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Student name"
+              value={newStudentName}
+              onChange={(e) => setNewStudentName(e.target.value)}
+              className="border p-2 mr-2"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Department name"
+              value={newDepartmentName}
+              onChange={(e) => setnewDepartmentName(e.target.value)}
+              className="border p-2 mr-2"
+              required
+            />
+          </div>
+          <button type="submit" className="bg-blue-500 text-white p-2 rounded">
+            {editingId ? 'Update Student' : 'Add Student'}
           </button>
-        )}
-      </form>
+          {/* Cancel Edit Button */}
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => { setEditingId(null); setNewStudentName(''); }}
+              className="ml-2 text-gray-500"
+            >
+              Cancel
+            </button>
+          )}
+        </form>
+      )}
 
       <h2 className="text-2xl font-bold mb-4">Students List</h2>
       {/* Rendering the List */}
@@ -118,18 +130,23 @@ export default function StudentsPage() {
             <span>{student.name} - {student.department}</span>
             <div>
               {/* EDIT & DELETE BUTTONS */}
-              <button
-                onClick={() => handleEditClick(student)}
-                className="text-blue-500 mr-4"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => dispatch(deleteStudent(student.id))}
-                className="text-red-500"
-              >
-                Delete
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => handleEditClick(student)}
+                  className="text-blue-500 mr-4"
+                >
+                  Edit
+                </button>
+              )}
+
+              {canDelete && (
+                <button
+                  onClick={() => dispatch(deleteStudent(student.id))}
+                  className="text-red-500"
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -137,44 +154,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
-
-
-import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-
-// 1. Define the NextAuth configuration
-const authOptions = {
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        username: { label: "Username", type: "text", placeholder: "jsmith" },
-        password: { label: "Password", type: "password" }
-      },
-      // 2. The authorize function runs when a user hits "Submit" on the login form
-      async authorize(credentials) {
-        // MOCK LOGIN LOGIC: We will replace this with a Hasura DB check in Step 5.
-        // For now, if they type "admin" and "password", let them in!
-        if (credentials?.username === "admin" && credentials?.password === "password") {
-          return { 
-            id: "1", 
-            name: "Admin User", 
-            email: "admin@example.com",
-            // We are adding a custom 'role' property here to prepare for Step 4 (RBAC)
-            role: "admin" 
-          };
-        }
-        
-        // Returning null means the login failed
-        return null; 
-      }
-    })
-  ],
-};
-
-// 3. Create the handler
-const handler = NextAuth(authOptions);
-
-// 4. Export it for both GET and POST requests (required by Next.js App Router)
-export { handler as GET, handler as POST };
