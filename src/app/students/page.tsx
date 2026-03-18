@@ -137,3 +137,44 @@ export default function StudentsPage() {
     </div>
   );
 }
+
+
+
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+
+// 1. Define the NextAuth configuration
+const authOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        username: { label: "Username", type: "text", placeholder: "jsmith" },
+        password: { label: "Password", type: "password" }
+      },
+      // 2. The authorize function runs when a user hits "Submit" on the login form
+      async authorize(credentials) {
+        // MOCK LOGIN LOGIC: We will replace this with a Hasura DB check in Step 5.
+        // For now, if they type "admin" and "password", let them in!
+        if (credentials?.username === "admin" && credentials?.password === "password") {
+          return { 
+            id: "1", 
+            name: "Admin User", 
+            email: "admin@example.com",
+            // We are adding a custom 'role' property here to prepare for Step 4 (RBAC)
+            role: "admin" 
+          };
+        }
+        
+        // Returning null means the login failed
+        return null; 
+      }
+    })
+  ],
+};
+
+// 3. Create the handler
+const handler = NextAuth(authOptions);
+
+// 4. Export it for both GET and POST requests (required by Next.js App Router)
+export { handler as GET, handler as POST };
