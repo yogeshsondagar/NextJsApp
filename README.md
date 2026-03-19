@@ -16,6 +16,9 @@ A robust, full-stack Next.js application designed for student management, featur
 
 ## 🛠️ Getting Started
 
+> [!TIP]
+> **New to the project?** Please follow our detailed [Local Development Setup Guide](setup.md) to get running in minutes.
+
 ### 1. Prerequisites
 - Docker & Docker Compose
 - Node.js (Latest LTS recommended)
@@ -135,7 +138,7 @@ NextJsApp/
 |   package.json
 |   postcss.config.mjs
 |   README.md
-|   setup.md
+|   [setup.md](setup.md) (Local Setup Guide)
 |   tsconfig.json
 |
 +---hasura/
@@ -194,4 +197,3 @@ NextJsApp/
 ```
 
 ---
-*Created and maintained as part of the Internship Project.*
