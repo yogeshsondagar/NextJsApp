@@ -3,20 +3,44 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery } from '@apollo/client/react';
+import { gql } from '@apollo/client';
+
+// --- GRAPHQL ---
+const GET_DEPARTMENTS = gql`
+  query GetDepartmentsForRegistration {
+    departments(order_by: { name: asc }) {
+      id
+      name
+    }
+  }
+`;
+
+interface Department {
+  id: string;
+  name: string;
+}
+
+interface GetDepartmentsData {
+  departments: Department[];
+}
 
 export default function RegisterPage() {
   const router = useRouter();
   
+  // Fetch departments for the dropdown
+const { data, loading: loadingDepts } = useQuery<GetDepartmentsData>(GET_DEPARTMENTS);
+  const departments: Department[] = data?.departments || [];
+
   // Form State
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('intern'); // Default role
+  const [departmentId, setDepartmentId] = useState(''); // New state for department tracking
   
   // UI State
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-
-  // FIXED: We now use standard React state to track loading
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,18 +48,26 @@ export default function RegisterPage() {
     setError('');
     setIsSubmitting(true); 
 
+    // If they switched to admin, ensure we don't accidentally send a department ID
+    const payloadDeptId = role === 'admin' ? null : (departmentId || null);
+
     try {
-      // Send the plain text data to our secure Next.js backend for hashing
+      // Send the payload to our newly updated secure Next.js backend
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, role }),
+        body: JSON.stringify({ 
+          username, 
+          password, 
+          role,
+          department_id: payloadDeptId // Include the department!
+        }),
       });
 
-      const data = await response.json();
+      const resultData = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to register");
+        throw new Error(resultData.message || "Failed to register");
       }
 
       setSuccess(true);
@@ -45,13 +77,13 @@ export default function RegisterPage() {
 
     } catch (err: any) {
       console.error("Registration error:", err);
-      if (err.message.includes("Uniqueness violation") || err.message.includes("constraint")) {
+      if (err.message.includes("Uniqueness violation") || err.message.includes("constraint") || err.message.includes("taken")) {
         setError("That username is already taken. Please choose another.");
       } else {
         setError(err.message);
       }
     } finally {
-      setIsSubmitting(false); // Stop the loading spinner
+      setIsSubmitting(false); 
     }
   };
 
@@ -113,14 +145,40 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">System Role</label>
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
+                onChange={(e) => {
+                  setRole(e.target.value);
+                  // Auto-clear department if they switch to admin
+                  if (e.target.value === 'admin') setDepartmentId('');
+                }}
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg"
               >
                 <option value="intern">Intern (View Only)</option>
-                <option value="department">Department (Can Edit)</option>
-                <option value="admin">Admin (Full Access)</option>
+                <option value="department">Department Manager (Can Edit)</option>
+                <option value="admin">System Admin (Full Access)</option>
               </select>
             </div>
+
+            {/* Conditionally Render the Department Dropdown */}
+            {role !== 'admin' && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Assign to Department <span className="text-gray-400 font-normal">(Optional)</span>
+                </label>
+                <select
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                  disabled={loadingDepts}
+                  className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg ${loadingDepts ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
+                >
+                  <option value="">-- Unassigned --</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div>
