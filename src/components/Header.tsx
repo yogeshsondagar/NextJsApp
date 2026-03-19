@@ -24,16 +24,16 @@ export default function Header() {
             <span className="text-sm text-gray-700">
               Welcome, <span className="font-bold">{session.user?.name}</span>
             </span>
-            <button 
-              onClick={() => signOut()} 
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="text-sm text-red-600 hover:text-red-800 font-medium"
             >
               Logout
             </button>
           </div>
         ) : (
-          <button 
-            onClick={() => signIn()} 
+          <button
+            onClick={() => signIn()}
             className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
           >
             Login

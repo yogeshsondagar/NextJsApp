@@ -1,3 +1,4 @@
+// Previously named middleware.ts but renamed to proxy.ts from nextjs 16+
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
