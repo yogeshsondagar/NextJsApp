@@ -112,6 +112,60 @@ Added permanent user accounts and password security.
 - **`src/app/login/page.tsx` & `src/app/register/page.tsx`**: branded, modern Tailwind CSS forms for user interaction.
   - *Concept*: **Separation of Concerns**. The frontend gathers data while the backend handles saving and verification.
 
+
+### Phase 7: Role-Based Internship Management Portal
+
+#### Architectural Pivot
+Shifted the database and application logic from a multi-company SaaS model to a **single-company internal portal**. The primary organizational unit is now the `Department`, managed by users with the `department` role, overseeing `interns` (students).
+
+---
+
+#### 1. Database Schema Changes (PostgreSQL / Hasura)
+Executed raw SQL migrations and tracked new GraphQL relationships in the Hasura Console.
+* **Added `departments` table**: Contains `id` (UUID), `name`, and `description`.
+* **Updated `users` table**: Added `department_id` as a Foreign Key to link Department Managers to their specific team.
+* **Updated `students` table (Intern Profiles)**:
+  * Dropped the legacy `department` (text) column.
+  * Added `department_id` (Foreign Key).
+  * Added logistics columns: `status` (Text: Onboarding, Active, Completed), `start_date` (Date), `end_date` (Date), and `assigned_manager` (Text).
+
+---
+
+#### 2. Type Augmentations
+* **`src/types/next-auth.d.ts`**:
+  * Modified NextAuth types to expose custom Hasura columns to the frontend.
+  * Added `id`, `role`, `username`, and `department_id` to the `Session`, `User`, and `JWT` interfaces to ensure full TypeScript safety across the app.
+
+---
+
+#### 3. Backend & API Modifications
+* **`src/app/api/auth/[...nextauth]/route.ts`**:
+  * Updated the Hasura GraphQL query inside the `authorize` callback to fetch the user's `id` and `department_id`.
+  * Updated the `jwt` and `session` callbacks to securely pass these new fields to the client.
+* **`src/app/api/register/route.ts`**:
+  * Upgraded to accept `department_id` from the frontend.
+  * Added automated onboarding logic: If a user registers with the `intern` role, the API now seamlessly executes a second GraphQL mutation to generate a blank record for them in the `students` table.
+* **`src/app/api/seed/route.ts` (Temporary)**:
+  * Created a database seeding script to securely hash passwords and populate dummy Departments, Managers, and Interns. *(Note: This file was deleted after successful execution for security).*
+
+---
+
+#### 4. Frontend Pages & Components Created/Modified
+* **`src/components/Header.tsx` (Modified)**:
+  * Replaced static links with dynamic, role-aware conditional rendering based on `session.user.role`.
+* **`src/app/admin-dashboard/page.tsx` (New)**:
+  * Built the God-mode view for Admins to create new Departments and assign interns to those departments via Apollo Client mutations.
+* **`src/app/department/page.tsx` (New)**:
+  * Built the scoped workspace for Department Managers. Uses `session.user.department_id` to query Hasura so managers exclusively see and manage their own team's logistics.
+* **`src/app/profile/page.tsx` (New)**:
+  * Built the read-only Intern Dashboard. Queries the `students` table matching `session.user.username` to display onboarding status, dates, and manager assignments.
+* **`src/app/students/page.tsx` (Modified)**:
+  * Upgraded the global directory to use a dynamic dropdown for department assignment.
+  * Implemented Row-Level UI Security: Department Managers are visually restricted to seeing and editing only the interns belonging to their assigned `department_id`.
+* **`src/app/register/page.tsx` (Modified)**:
+  * Integrated Apollo `useQuery` to fetch live departments for a selection dropdown.
+  * Added conditional logic to hide the department dropdown if the user registers as a global "Admin".
+
 ---
 
 ## 📖 Learn More
@@ -138,6 +192,7 @@ NextJsApp/
 |   package.json
 |   postcss.config.mjs
 |   README.md
+|   [setup-db.md](setup-db.md) (Database Setup)
 |   [setup.md](setup.md) (Local Setup Guide)
 |   tsconfig.json
 |
@@ -155,6 +210,7 @@ NextJsApp/
     |   proxy.ts
     |
     +---app/
+    |   |   favicon.ico
     |   |   globals.css
     |   |   layout.tsx
     |   |   page.tsx
@@ -170,7 +226,13 @@ NextJsApp/
     |   |   \---register/
     |   |           route.ts
     |   |
+    |   +---department/
+    |   |       page.tsx
+    |   |
     |   +---login/
+    |   |       page.tsx
+    |   |
+    |   +---profile/
     |   |       page.tsx
     |   |
     |   +---register/
@@ -195,5 +257,3 @@ NextJsApp/
     \---types/
             next-auth.d.ts
 ```
-
----
