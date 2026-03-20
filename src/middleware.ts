@@ -28,7 +28,7 @@ export default withAuth(
 // 2. Define which routes the middleware should protect
 export const config = {
     //   "Protect /students and any sub-routes inside it"
-    matcher: ["/students/:path*", "/admin-dashboard/:path*"]
+    matcher: ["/students/:path*", "/admin-dashboard/:path*", "/department/:path*", "/profile/:path*"]
 };
 
 

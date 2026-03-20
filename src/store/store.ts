@@ -1,9 +1,10 @@
 import { configureStore } from '@reduxjs/toolkit';
-import studentReducer from './studentSlice';    
+import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
+import toastReducer from './toastSlice';    
 
 export const store = configureStore({
     reducer: {
-    students: studentReducer, // Maps the slice to the 'students' key in the store
+    toast: toastReducer, 
   },
 }) ;
 
@@ -18,3 +19,6 @@ export type RootState = ReturnType<typeof store.getState>;
 // AppDispatch → a reusable TypeScript type for typed dispatch everywhere in your app
 // It ensures type-safe actions and thunks, preventing mistakes and improving autocomplete.
 export type AppDispatch = typeof store.dispatch;
+
+export const useAppDispatch: () => AppDispatch = useDispatch;
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;

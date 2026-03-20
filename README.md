@@ -71,7 +71,7 @@ Built a local-state interactive UI and upgraded it to global state using Redux T
 
 - **`src/app/students/page.tsx`**: Renders the Students management UI. Handles the form for adding/editing students and displays the filtered list.
   - *Next.js Concept*: **Client Component (`'use client'`)**. Explicitly ships JavaScript to the browser for React Hooks (useState, useEffect) and Redux hooks.
-- **`src/store/studentSlice.ts` & `src/store/store.ts`**: Defines the "rules" for how student data can change and configures the central store.
+- **`src/store/toastSlice.ts` & `src/store/store.ts`**: Defines the "rules" for UI state (notifications) and configures the central store.
   - *Next.js Concept*: **Framework-Agnostic Logic**. Standard .ts files executing pure logic without touching React rendering cycles.
 - **`src/store/StoreProvider.tsx` & `src/app/layout.tsx`**: Wraps the entire app in the Redux store.
   - *Next.js Concept*: **Client Boundaries**. Bridging Server Components (Layout) with Client Components (Providers).
@@ -83,15 +83,15 @@ Integrated NextAuth for session management and route protection.
   - *Next.js Concept*: **API Routes (Server-Side)**. Uses dynamic catch-all routes to automatically generate necessary backend endpoints.
 - **`src/middleware.ts`**: Acts as a global guard, intercepting requests to protected routes.
   - *Next.js Concept*: **Edge Middleware**. Runs before a request finishes hitting the server, providing the fastest and most secure way to protect pages.
-- **`src/components/layout/Header.tsx`**: Dynamically shows Login/Logout buttons based on authentication state.
+- **`src/components/Header.tsx`**: Dynamically shows Login/Logout buttons based on authentication state.
   - *Next.js Concept*: **Client-Side Auth State**. Uses `useSession()` to listen to session cookies in real-time.
+- **`src/types/next-auth.d.ts`**: Expands default NextAuth definitions to include custom role properties.
+  - *Next.js Concept*: **TypeScript Declaration Merging**. Injecting custom types into library core definitions.
 
 ### Phase 4: RBAC & Advanced Auth
 Implemented UI-level and Route-level security.
 
-- **`src/types/next-auth.d.ts`**: Expands default NextAuth definitions to include custom role properties.
-  - *Next.js Concept*: **TypeScript Declaration Merging**. Injecting custom types into library core definitions.
-- **`src/proxy.ts` (formerly `middleware.ts`)**: Upgraded gateway to use `withAuth` for role-based route blocking.
+- **`src/middleware.ts` (formerly `middleware.ts`)**: Upgraded gateway to use `withAuth` for role-based route blocking.
   - *Next.js Concept*: **Route-Level RBAC (Edge Proxy)**. Physically blocks unauthorized users from downloading protected content.
 
 ### Phase 5: Hasura & Apollo Integration
@@ -109,7 +109,7 @@ Added permanent user accounts and password security.
 
 - **`src/app/api/register/route.ts`**: A secure middleman that received plain-text passwords and hashes them using **bcryptjs**.
   - *Concept*: **Server-Side Security**. Never exposing database secrets or hashing logic to the client.
-- **`src/app/login/page.tsx` & `src/app/register/page.tsx`**: branded, modern Tailwind CSS forms for user interaction.
+- **`src/app/(auth)/login/page.tsx` & `src/app/(auth)/register/page.tsx`**: branded, modern Tailwind CSS forms for user interaction.
   - *Concept*: **Separation of Concerns**. The frontend gathers data while the backend handles saving and verification.
 
 
@@ -149,22 +149,35 @@ Executed raw SQL migrations and tracked new GraphQL relationships in the Hasura 
   * Created a database seeding script to securely hash passwords and populate dummy Departments, Managers, and Interns. *(Note: This file was deleted after successful execution for security).*
 
 ---
-
+ 
 #### 4. Frontend Pages & Components Created/Modified
 * **`src/components/Header.tsx` (Modified)**:
   * Replaced static links with dynamic, role-aware conditional rendering based on `session.user.role`.
-* **`src/app/admin-dashboard/page.tsx` (New)**:
-  * Built the God-mode view for Admins to create new Departments and assign interns to those departments via Apollo Client mutations.
-* **`src/app/department/page.tsx` (New)**:
-  * Built the scoped workspace for Department Managers. Uses `session.user.department_id` to query Hasura so managers exclusively see and manage their own team's logistics.
-* **`src/app/profile/page.tsx` (New)**:
-  * Built the read-only Intern Dashboard. Queries the `students` table matching `session.user.username` to display onboarding status, dates, and manager assignments.
+* **`src/app/(dashboards)/admin-dashboard/page.tsx` (New)**:
+  - Built the God-mode view for Admins to create new Departments and assign interns to those departments via Apollo Client mutations.
+* **`src/app/(dashboards)/department/page.tsx` (New)**:
+  - Built the scoped workspace for Department Managers. Uses `session.user.department_id` to query Hasura so managers exclusively see and manage their own team's logistics.
+* **`src/app/(dashboards)/profile/page.tsx` (New)**:
+  - Built the read-only Intern Dashboard. Queries the `students` table matching `session.user.username` to display onboarding status, dates, and manager assignments.
 * **`src/app/students/page.tsx` (Modified)**:
   * Upgraded the global directory to use a dynamic dropdown for department assignment.
   * Implemented Row-Level UI Security: Department Managers are visually restricted to seeing and editing only the interns belonging to their assigned `department_id`.
-* **`src/app/register/page.tsx` (Modified)**:
-  * Integrated Apollo `useQuery` to fetch live departments for a selection dropdown.
-  * Added conditional logic to hide the department dropdown if the user registers as a global "Admin".
+* **`src/app/(auth)/register/page.tsx` (Modified)**:
+  - Integrated Apollo `useQuery` to fetch live departments for a selection dropdown.
+  - Added conditional logic to hide the department dropdown if the user registers as a global "Admin".
+
+---
+
+### Phase 8: Syncing Users & Redux UI State
+Improved the onboarding flow by automating user account creation and providing real-time UI feedback.
+
+- **`src/app/api/admin/create-intern/route.ts`**: A new administrative endpoint that simultaneously creates a Hasura user (with hashed password) and a corresponding intern profile.
+  - *Concept*: **Atomic Operations**. Ensuring both the auth record and the application profile are created successfully in a single workflow.
+- **`src/store/toastSlice.ts` & `src/components/ToastContainer.tsx`**: Replaced the legacy Redux student state with a dedicated UI notification system.
+  - *Concept*: **UI-Centric State Management**. Using Redux exclusively for transient, application-wide data like toast notifications.
+- **`src/app/students/page.tsx` (Advanced Integration)**: Linked the frontend form to the new admin API and implemented automated UI triggers.
+  - *Concept*: **Hybrid Data Flow**. Combining Apollo GraphQL for data synchronization with standard REST `fetch` for specialized secure operations.
+- **`src/store/store.ts` (Typed Hooks)**: Added `useAppDispatch` and `useAppSelector` for full type safety in Redux interactions.
 
 ---
 
@@ -207,7 +220,7 @@ NextJsApp/
 |       window.svg
 |
 \---src/
-    |   proxy.ts
+    |   middleware.ts
     |
     +---app/
     |   |   favicon.ico
@@ -215,36 +228,38 @@ NextJsApp/
     |   |   layout.tsx
     |   |   page.tsx
     |   |
-    |   +---admin-dashboard/
-    |   |       page.tsx
-    |   |
-    |   +---api/
-    |   |   +---auth/
-    |   |   |   \---[...nextauth]/
-    |   |   |           route.ts
-    |   |   |
+    |   +---(auth)/
+    |   |   +---login/
+    |   |   |       page.tsx
     |   |   \---register/
-    |   |           route.ts
+    |   |           page.tsx
     |   |
-    |   +---department/
-    |   |       page.tsx
+    |   +---(dashboards)/
+    |   |   +---admin-dashboard/
+    |   |   |       page.tsx
+    |   |   +---department/
+    |   |   |       page.tsx
+    |   |   \---profile/
+    |   |           page.tsx
     |   |
-    |   +---login/
-    |   |       page.tsx
+    |   +---students/
+    |   |           page.tsx
     |   |
-    |   +---profile/
-    |   |       page.tsx
-    |   |
-    |   +---register/
-    |   |       page.tsx
-    |   |
-    |   \---students/
-    |           page.tsx
+    |   \---api/
+    |       +---auth/
+    |       |   \---[...nextauth]/
+    |       |           route.ts
+    |       +---register/
+    |       |       route.ts
+    |       \---admin/
+    |           \---create-intern/
+    |                   route.ts
     |
     +---components/
     |       ApolloWrapper.tsx
     |       AuthProvider.tsx
     |       Header.tsx
+    |       ToastContainer.tsx
     |
     +---lib/
     |       apolloClient.ts
@@ -252,7 +267,7 @@ NextJsApp/
     +---store/
     |       store.ts
     |       StoreProvider.tsx
-    |       studentSlice.ts
+    |       toastSlice.ts
     |
     \---types/
             next-auth.d.ts

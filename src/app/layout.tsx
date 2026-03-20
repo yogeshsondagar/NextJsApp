@@ -6,6 +6,7 @@ import StoreProvider from '@/store/StoreProvider';
 import Header from "../components/Header";
 import AuthProvider from "../components/AuthProvider";
 import ApolloWrapper from "../components/ApolloWrapper";
+import ToastContainer from "@/components/ToastContainer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
           <StoreProvider>
             <ApolloWrapper>
             <Header />
+            <ToastContainer />
             {children}
             </ApolloWrapper>
           </StoreProvider>
